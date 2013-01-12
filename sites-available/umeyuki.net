@@ -1,6 +1,6 @@
 upstream umeyuki_blog {
     ip_hash;
-    server unix:/var/run/umeyuki_blog.sock;
+    server unix:/var/run/nginx_umeyuki_blog.sock;
 }
 
 server {
@@ -17,6 +17,7 @@ server {
     error_log /var/log/nginx/umeyuki_blog_error.log;
     port_in_redirect off;
 
+    rewrite /wp-admin$  $scheme://$host$uri/ permanent;
     location ~ /\. {
         deny all;
         access_log off;
@@ -38,19 +39,10 @@ server {
     }
     location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
         log_not_found off;
-        proxy_pass http://umeyuki_blog;
+        break;
     }
-    location ~ /purge(/.*) {
-       allow 127.0.0.1;
-       allow 192.0.2.1;
-       deny all;       
-       proxy_cache_purge czone "$scheme://$host$1$is_args$args$mobile";
-    }
-
+ 
     location / {
-        if ($http_user_agent ~* '(DoCoMo|J-PHONE|Vodafone|MOT-|UP\.Browser|DDIPOCKET|ASTEL|PDXGW|Palmscape|Xiino|sharp pda browser|Windows CE|L-mode|WILLCOM|SoftBank|Semulator|Vemulator|J-EMULATOR|emobile|mixi-mobile-converter)') {
-           set $mobile 1;
-        }
         if ($http_user_agent ~* '(iPhone|iPod|Opera Mini|Android.*Mobile|NetFront|PSP|BlackBerry)') {
             set $mobile 2;
         }
@@ -73,7 +65,7 @@ server {
 }
 
 server {
-    listen unix:/var/run/umeyuki_blog.sock;
+    listen unix:/var/run/nginx_umeyuki_blog.sock;
     server_name umeyuki.net;
     root /var/www/umeyuki.net;
  
