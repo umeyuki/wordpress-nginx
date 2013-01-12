@@ -1,95 +1,129 @@
-upstream umeyuki_blog {
-    ip_hash;
-    server unix:/var/run/nginx_umeyuki_blog.sock;
+upstream phpfpm {
+    server unix:/var/run/php-fpm/php-fpm.sock;
 }
-
-server {
-   server_name www.umeyuki.net;
-   rewrite ^ http://umeyuki.net$request_uri? permanent;
-}
-
 server {
     listen 80;
-    server_name umeyuki.net;
+    server_name www.umeyuki.net umeyuki.net; 
     root /var/www/umeyuki.net;
-
     access_log /var/log/nginx/umeyuki_blog_access.log main;
     error_log /var/log/nginx/umeyuki_blog_error.log;
     port_in_redirect off;
-
-    rewrite /wp-admin$  $scheme://$host$uri/ permanent;
-    location ~ /\. {
-        deny all;
-        access_log off;
-        log_not_found off;
-    }
-    location = /robots.txt {
-        access_log off;
-        log_not_found off;
-    }
-    location = /favicon.ico {
-        access_log off;
-        log_not_found off;
-    }
-    location /wp-admin {
-        proxy_pass http://umeyuki_blog;
-    }
-    location ~ .*.php {
-        proxy_pass http://umeyuki_blog;
-    }
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
-        log_not_found off;
-        break;
-    }
- 
+    
     location / {
-        if ($http_user_agent ~* '(iPhone|iPod|Opera Mini|Android.*Mobile|NetFront|PSP|BlackBerry)') {
-            set $mobile 2;
-        }
-        if ($http_cookie ~* "comment_author_[^=]*=([^%]+)%7C|wordpress_logged_in_[^=]*=([^%]+)%7C") {
-            set $do_not_cache 1;
-        }
-        if ($http_user_agent ~* “2.0\ 2MMP|240×320|400X240|AvantGo|BlackBerry|Blazer|Cellphone|Danger|DoCoMo|Elaine/3.0|EudoraWeb|Googlebot-Mobile|hiptop|IEMobile|KYOCERA/WX310K|LG/U990|MIDP-2.|MMEF20|MOT-V|NetFront|Newt|Nintendo\ Wii|Nitro|Nokia|Opera\ Mini|Palm|PlayStation\ Portable|portalmmm|Proxinet|ProxiNet|SHARP-TQ-GX10|SHG-i900|Small|SonyEricsson|Symbian\ OS|SymbianOS|TS21i-10|UP.Browser|UP.Link|webOS|Windows\ CE|WinWAP|YahooSeeker/M1A1-R2D2|iPhone|iPod|Android|BlackBerry9530|LG-TU915\ Obigo|LGE\ VX|webOS|Nokia5800″) {
-          set $do_not_cache 1;
-        } 
-        proxy_no_cache     $do_not_cache;
-        proxy_cache_bypass $do_not_cache;
-        proxy_cache czone;
-        proxy_cache_key "$scheme://$host$request_uri$is_args$args$mobile";
-        proxy_cache_valid  200 301 302 30m;
-        proxy_cache_valid  404 5m;
-        proxy_cache_use_stale  error timeout invalid_header updating
-                               http_500 http_502 http_503 http_504;
-        proxy_pass http://umeyuki_blog;
-    }
-}
-
-server {
-    listen unix:/var/run/nginx_umeyuki_blog.sock;
-    server_name umeyuki.net;
-    root /var/www/umeyuki.net;
- 
-    access_log /var/log/nginx/umeyuki_blog_access.log main;
-    error_log /var/log/nginx/umeyuki_blog_error.log;
-    port_in_redirect off;
- 
-    location / {
-        index index.php;
- 
-        if (-f $request_filename) {
-            expires 14d;
+        if (-f $request_filename ) {
+            #expires 14d;
             break;
         }
+        set $nocache "";
+        set $supercache_file $document_root/wp-content/cache/supercache/${http_host}${uri}/index.html;
+        set $supercache_uri "";
+        if (-f $supercache_file) {
+            set $supercache_uri /wp-content/cache/supercache/${http_host}${uri}/index.html;
+        }
+
+        if ($request_method = "POST") {
+            set $supercache_uri "";
+            set $nocache "1";
+        }
+
+        if ($query_string ~ .*=.*) {
+            set $supercache_uri "";
+        }
+
+        if ($http_cookie ~ ^.*(comment_author_|wordpress_logged_in|wp-postpass_).*$) {
+            set $supercache_uri "";
+            set $nocache "1";
+        }
+
+        if ($http_x_wap_profile ~ ^[a-z0-9\"]+) {
+            set $supercache_uri "";
+            set $nocache "1";
+        }
+
+        if ($http_profile ~ ^[a-z0-9\"]+) {
+            set $supercache_uri "";
+            set $nocache "1";
+        }
+
+        if ($http_user_agent ~ ^.*(2.0\ MMP|240x320|400X240|AvantGo|BlackBerry|Blazer|Cellphone|Danger|DoCoMo|Elaine/3.0|EudoraWeb|Googlebot-Mobile|hiptop|IEMobile|KYOCERA/WX310K|LG/U990|MIDP-2.|MMEF20|MOT-V|NetFront|Newt|Nintendo\ Wii|Nitro|Nokia|Opera\ Mini|Palm|PlayStation\ Portable|portalmmm|Proxinet|ProxiNet|SHARP-TQ-GX10|SHG-i900|Small|SonyEricsson|Symbian\ OS|SymbianOS|TS21i-10|UP.Browser|UP.Link|webOS|Windows\ CE|WinWAP|YahooSeeker/M1A1-R2D2|iPhone|iPod|Android|BlackBerry9530|LG-TU915\ Obigo|LGE\ VX|webOS|Nokia5800).*) {
+            set $supercache_uri "";
+            set $nocache "1";
+        }
+
+        if ($http_user_agent ~ ^(w3c\ |w3c-|acs-|alav|alca|amoi|audi|avan|benq|bird|blac|blaz|brew|cell|cldc|cmd-|dang|doco|eric|hipt|htc_|inno|ipaq|ipod|jigs|kddi|keji|leno|lg-c|lg-d|lg-g|lge-|lg/u|maui|maxo|midp|mits|mmef|mobi|mot-|moto|mwbp|nec-|newt|noki|palm|pana|pant|phil|play|port|prox|qwap|sage|sams|sany|sch-|sec-|send|seri|sgh-|shar|sie-|siem|smal|smar|sony|sph-|symb|t-mo|teli|tim-|tosh|tsm-|upg1|upsi|vk-v|voda|wap-|wapa|wapi|wapp|wapr|webc|winw|winw|xda\ |xda-).*) {
+            set $supercache_uri "";        
+            set $nocache "1";
+        }
+
+        if ($http_user_agent ~ ^(DoCoMo/|J-PHONE/|J-EMULATOR/|Vodafone/|MOT(EMULATOR)?-|SoftBank/|[VS]emulator/|KDDI-|UP\.Browser/|emobile/|Huawei/|IAC/|Nokia|mixi-mobile-converter/)) {
+            set $supercache_uri "";
+            set $nocache "1";
+        }
+
+        if ($http_user_agent ~ (DDIPOCKET\;|WILLCOM\;|Opera\ Mini|Opera\ Mobi|PalmOS|Windows\ CE\;|PDA\;\ SL-|PlayStation\ Portable\;|SONY/COM|Nitro|Nintendo)) {
+            set $supercache_uri "";
+            set $nocache "1";
+        }
+
+        if ($supercache_uri) {
+            rewrite ^ $supercache_uri last;
+            break;
+        }
+
+        rewrite ^ /index.php last;
     }
-    if (!-e $request_filename) {
-                rewrite ^.+?($/-.*) $1 last;
-                rewrite ^.+?(/.*\.php)$ $1 last;
-                rewrite ^ /index.php last;
+
+    location ~ \.php {
+        # 存在しないPHPファイルをシャットアウト
+        if (!-f $request_filename) {
+            return 404;
+            break;
+        }
+
+        # fastcgi とfastcgi cacheの設定
+        include ./fastcgi.conf;
+        fastcgi_pass          phpfpm;
+        fastcgi_cache         fcgi_cache;
+        fastcgi_cache_key     "$scheme://$host$request_uri";
+        fastcgi_cache_valid   200 10m;
+        fastcgi_cache_valid   404 1m;
+        # $nocache = "1"の時、fastcgi cacheが無効になる
+        fastcgi_cache_bypass  $nocache;
     }
-    location ~ \.php$ {
-        fastcgi_pass   unix:/var/run/php-fpm/php-fpm.sock;
-        fastcgi_index  index.php;
-        fastcgi_param  SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include        fastcgi_params;
+
+    # よくアクセスされる静的ファイルにブラウザキャッシュが効くように設定
+    location ~ \.(jpg|png|gif|swf|jpeg)$ {
+        log_not_found off; # 404の時にerror_logに書き込まないようにする設定
+        access_log off;
+        expires 3d;
+    }
+
+    location ~ \.ico$ {
+        log_not_found off;
+        access_log off;
+        expires max;
+    }
+
+    location ~ \.(css|js)$ {
+        charset  UTF-8;
+        access_log off;
+        expires 1d;
+    }
+
+    # ドット始まりのファイルはアクセスできないように
+    location ~ /\. {
+        deny all;
+        log_not_found off;
+        access_log off;
+    }
+
+    # リライトされたWP Super Cacheのファイル
+    location ~ /wp-content/cache/supercache/${http_host}${uri}/index\.html(\.gz)?$ {
+        charset  UTF-8;
+        internal; # この指定をしておくとURLを指定して直接アクセスできなくなる
+    }
+
+    location ~ /wp-admin/$ {
+        rewrite ^/wp-admin/$ /wp-admin/index.php last;
     }
 }
