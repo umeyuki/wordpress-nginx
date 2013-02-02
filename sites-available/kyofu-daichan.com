@@ -1,12 +1,12 @@
 # Virtual Configuration for PHP FastCGI
 server {
-    listen   18081; ## listen for ipv4; this line is default and implied
+    listen   18082; ## listen for ipv4; this line is default and implied
     #listen   [::]:80 default ipv6only=on; ## listen for ipv6
 
     server_name  _;
 
     location / {
-        root   /var/www/umeyuki.net;
+        root   /var/www/kyofu-daichan.com;
         index  index.php;
 
         # static files
@@ -22,32 +22,32 @@ server {
     }
 
     location ~ \.php$ {
-        root /var/www/umeyuki.net; 
+        root /var/www/kyofu-daichan.com; 
         fastcgi_split_path_info ^(.+\.php)(/.+)$;
         fastcgi_pass   phpfpm;
         fastcgi_index  index.php;
-        fastcgi_param  SCRIPT_FILENAME  /var/www/umeyuki.net/$fastcgi_script_name;
+        fastcgi_param  SCRIPT_FILENAME  /var/www/kyofu-daichan.com/$fastcgi_script_name;
         include        fastcgi_params;
     }
 
-    access_log /var/log/nginx/umeyuki.net/fcgi_access.log;
-    error_log /var/log/nginx/umeyuki.net/fcgi_error.log;
+    access_log /var/log/nginx/kyofu-daichan.com/fcgi_access.log;
+    error_log /var/log/nginx/kyofu-daichan.com/fcgi_error.log;
 }
 
 server {
     listen 80;
-    server_name umeyuki.net *.umeyuki.net;
+    server_name kyofu-daichan.com *.kyofu-daichan.com;
 
     location ~ /favicon.ico {
         access_log  off;
         expires 24h;
-        root /var/www/umeyuki.net;
+        root /var/www/kyofu-daichan.com;
         break;
     }
     location ~ ^/(media|share_img)/.+.(jpg|jpeg|gif|png|css|js|flv|swf|ico|xml)(\?[0-9\.]*)?$ {
         access_log  off;
         expires 24h;
-        root /var/www/umeyuki.net;
+        root /var/www/kyofu-daichan.com;
         break;
     }
     location ~ ^/purge(/.*)$ {
@@ -62,12 +62,12 @@ server {
     location ~ ^/wp-[^/]+/.+.(jpg|jpeg|gif|png|css|js|flv|swf|ico|xml)(\?[0-9\.]*)?$ {
         access_log  off;
         #expires 24h;
-        root /var/www/umeyuki.net;
+        root /var/www/kyofu-daichan.com;
         break;
     }
     rewrite /wp-admin$ $scheme://$host$uri/ permanent;
-    access_log /var/log/nginx/umeyuki.net/access.log;
-    error_log /var/log/nginx/umeyuki.net/error.log;
+    access_log /var/log/nginx/kyofu-daichan.com/access.log;
+    error_log /var/log/nginx/kyofu-daichan.com/error.log;
     if (!-e $request_filename) {
 #        rewrite ^/(.+)$ /$1 redirect;
         rewrite ^/(wp-.*)$ /$1 last;
@@ -99,7 +99,7 @@ server {
         proxy_cache        czone;
         proxy_cache_key    $scheme$host$uri$is_args$args;
         proxy_cache_valid  200 1d;
-        proxy_pass         http://umeyuki.net_backend;
+        proxy_pass         http://kyofu-daichan.com_backend;
 
     }
 }
