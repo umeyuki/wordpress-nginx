@@ -1,20 +1,19 @@
+upstream phpfpm {
+    server unix:/var/run/php-fpm/php-fpm.sock;
+}
 server {
-    listen       80;
-    server_name umeyuki.net www.umeyuki.net;
+    listen 80;
+    server_name www.umeyuki.net umeyuki.net; 
     root /var/www/umeyuki.net;
-    access_log logs/access.log main;
-
+    access_log /var/log/nginx/umeyuki_blog_access.log main;
+    error_log /var/log/nginx/umeyuki_blog_error.log;
+    port_in_redirect off;
+    
     location / {
-        # 静的なファイルの場合は処理をとめる
-        # リクエストの度にファイルの存在をチェックするのは無駄だという意見もありますが、
-        # どのURLの時index.phpに渡すのか、プラグインを含めて全仕様が分からないため、
-        # これが最も安全だと思います。
-        if (-f $request_filename) {
+        if (-f $request_filename ) {
+            #expires 14d;
             break;
         }
-
-        # ここからWP Super Cacheの設定（少しfastcgi cacheの設定も）
-        # モバイルからのアクセスはキャッシュさせないようにする変数
         set $nocache "";
         set $supercache_file $document_root/wp-content/cache/supercache/${http_host}${uri}/index.html;
         set $supercache_uri "";
@@ -84,14 +83,16 @@ server {
         # fastcgi とfastcgi cacheの設定
         include ./fastcgi.conf;
         fastcgi_pass          phpfpm;
+        fastcgi_index         index.php;
+        fastcgi_param         SCRIPT_FILENAME /var/www/umeyuki.net/$fastcgi_script_name;
+        fastcgi_pass_header   "X-Accel-Redirect";
+        fastcgi_pass_header   "X-Accel-Expires";
         fastcgi_cache         czone;
         fastcgi_cache_key     "$scheme://$host$request_uri";
         fastcgi_cache_valid   200 10m;
         fastcgi_cache_valid   404 1m;
         # $nocache = "1"の時、fastcgi cacheが無効になる
         fastcgi_cache_bypass  $nocache;
-        fastcgi_pass_header "X-Accel-Redirect";
-        fastcgi_pass_header "X-Accel-Expires";
     }
 
     # よくアクセスされる静的ファイルにブラウザキャッシュが効くように設定
