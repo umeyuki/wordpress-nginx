@@ -23,11 +23,12 @@ server {
 
     location ~ \.php$ {
         root /var/www/kyofu-daichan.com; 
+        include        fastcgi_params;
         fastcgi_split_path_info ^(.+\.php)(/.+)$;
         fastcgi_pass   phpfpm;
         fastcgi_index  index.php;
         fastcgi_param  SCRIPT_FILENAME  /var/www/kyofu-daichan.com/$fastcgi_script_name;
-        include        fastcgi_params;
+        fastcgi_param  SCRIPT_FILENAME  /var/www/umeyuki.net/$fastcgi_script_name;
     }
 
     access_log /var/log/nginx/kyofu-daichan.com/fcgi_access.log;
@@ -66,6 +67,15 @@ server {
         break;
     }
     rewrite /wp-admin$ $scheme://$host$uri/ permanent;
+    proxy_set_header  Host               $host;
+    proxy_set_header  X-Real-IP          $remote_addr;
+    proxy_set_header  Remote-Addr        $remote_addr;
+    proxy_set_header  X-Forwarded-Host   $host;
+    proxy_set_header  X-Forwarded-Server $host;
+    proxy_set_header  X-Forwarded-For    $proxy_add_x_forwarded_for;
+    proxy_connect_timeout 30;
+    proxy_send_timeout 30;
+    proxy_read_timeout 60;
     access_log /var/log/nginx/kyofu-daichan.com/access.log;
     error_log /var/log/nginx/kyofu-daichan.com/error.log;
     if (!-e $request_filename) {
@@ -97,7 +107,7 @@ server {
         proxy_no_cache     $do_not_cache;
         proxy_cache_bypass $do_not_cache;
         proxy_cache        czone;
-        proxy_cache_key    $scheme$host$uri$is_args$args;
+        proxy_cache_key    "$scheme://$host$request_uri";
         proxy_cache_valid  200 1d;
         proxy_pass         http://kyofu-daichan.com_backend;
 

@@ -1,0 +1,5 @@
+server {
+    listen 80;
+    server_name tumblr.umeyuki.net;
+    rewrite ^ http://draft.umeyuki.net$request_uri? permanent;
+}
